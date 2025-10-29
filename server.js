@@ -1,41 +1,40 @@
 import express from "express";
-import cors from "cors";
 import fetch from "node-fetch";
+import cors from "cors";
 
 const app = express();
-app.use(cors());
 app.use(express.json());
+app.use(cors());
 
-const BOTPRESS_API_KEY = process.env.BOTPRESS_API_KEY;
-const BOT_ID = process.env.BOT_ID; // you’ll get this from Botpress dashboard
+// ✅ Botpress API proxy route
+app.post("/api/botpress", async (req, res) => {
+  const { botId, message } = req.body;
 
-app.post("/chat", async (req, res) => {
+  if (!botId || !message) {
+    return res.status(400).json({ error: "Missing botId or message" });
+  }
+
   try {
-    const { message } = req.body;
-
-    const response = await fetch(`https://api.botpress.cloud/v1/bots/${BOT_ID}/converse`, {
+    const response = await fetch(`https://api.botpress.cloud/v1/bots/${botId}/converse`, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${BOTPRESS_API_KEY}`,
         "Content-Type": "application/json",
+        "Authorization": `Bearer bp_bak_N32vxOuMQ0ps2b6tbxuWg_kp2PiYtk3Nk2fj`
       },
-      body: JSON.stringify({
-        type: "text",
-        payload: message,
-      }),
+      body: JSON.stringify({ type: "text", text: message })
     });
 
     const data = await response.json();
-    res.json(data);
+    const reply = data.responses?.[0]?.payload?.text || "No response from Botpress.";
+
+    res.json({ reply });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Error contacting Botpress API" });
+    console.error("Error contacting Botpress:", error);
+    res.status(500).json({ error: "Failed to contact Botpress." });
   }
 });
 
-app.get("/", (req, res) => {
-  res.send("Aurora Medical AI backend is live!");
-});
-
+// ✅ Start server
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`✅ Aurora AI backend running on port ${PORT}`));
+
