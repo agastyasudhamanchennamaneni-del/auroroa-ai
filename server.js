@@ -13,16 +13,17 @@ const BOTPRESS_API_KEY = "bp_bak_N32vxOuMQ0ps2b6tbxuWg_kp2PiYtk3Nk2fj";
 // === ROUTE ===
 app.post("/api/message", async (req, res) => {
   const userMessage = req.body.message;
+  const userId = "user-" + Math.random().toString(36).substring(2, 8); // random user ID
 
   try {
-    const response = await fetch(`https://api.botpress.cloud/v1/chat/${BOT_ID}/messages`, {
+    const response = await fetch(`https://api.botpress.cloud/v1/bots/${BOT_ID}/converse/${userId}`, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${BOTPRESS_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        type: "message",
+        type: "text",
         payload: {
           text: userMessage,
         },
@@ -31,12 +32,13 @@ app.post("/api/message", async (req, res) => {
 
     const result = await response.json();
 
-    // Debug if needed
+    console.log("==> ///////////////////////////////////////////////////////////");
     console.log("🧾 Status:", response.status);
-    console.log("🧾 Raw Response:", JSON.stringify(result));
+    console.log("🧾 Raw Response:", JSON.stringify(result, null, 2));
 
-    // Botpress returns array under `responses`
-    const reply = result.responses?.[0]?.payload?.text || "⚠️ No response received from Aurora AI.";
+    const reply =
+      result.responses?.[0]?.payload?.text ||
+      "⚠️ No response received from Aurora AI.";
 
     res.json({ reply });
   } catch (error) {
