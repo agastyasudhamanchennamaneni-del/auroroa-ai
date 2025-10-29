@@ -13,22 +13,25 @@ app.post("/api/message", async (req, res) => {
   const userMessage = req.body.message;
 
   try {
-    const response = await fetch(`https://api.botpress.cloud/v1/bots/${BOT_ID}/converse`, {
+    // ✅ Create a conversation with the user's message
+    const response = await fetch("https://api.botpress.cloud/v1/chat/send", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        type: "text",
-        text: userMessage,
+        botId: BOT_ID,
+        payload: {
+          type: "text",
+          text: userMessage,
+        },
       }),
     });
 
     const raw = await response.text();
     console.log("🧾 Status:", response.status);
-    console.log("🧾 Headers:", Object.fromEntries(response.headers.entries()));
-    console.log("🧾 Raw Response:", raw.substring(0, 500)); // print first 500 chars
+    console.log("🧾 Raw Response:", raw.substring(0, 300));
 
     if (!response.ok) {
       return res.status(response.status).json({
@@ -48,13 +51,12 @@ app.post("/api/message", async (req, res) => {
       });
     }
 
-    if (data?.responses?.length > 0) {
-      const replyText = data.responses.map(r => r.text).join(" ");
-      return res.json({ reply: replyText });
-    }
+    const replyText =
+      data?.responses?.[0]?.payload?.text ||
+      data?.response ||
+      "⚠️ No reply received from Aurora AI.";
 
-    console.warn("⚠️ No reply field found:", data);
-    return res.json({ reply: "⚠️ No reply received from Aurora AI." });
+    res.json({ reply: replyText });
   } catch (error) {
     console.error("💥 Network error contacting Botpress:", error);
     res.status(500).json({ reply: "⚠️ Aurora AI backend connection error." });
