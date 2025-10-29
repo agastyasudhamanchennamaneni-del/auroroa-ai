@@ -12,14 +12,14 @@ const PORT = process.env.PORT || 10000;
 const BOT_ID = "72fae477-0056-4481-827d-ae436a468aab";
 const BOT_API_KEY = "bp_bak_N32vxOuMQ0ps2b6tbxuWg_kp2PiYtk3Nk2fj";
 
-// ✅ Handle chat messages from frontend
+// ✅ Route to handle frontend messages
 app.post("/api/message", async (req, res) => {
   const userMessage = req.body.message;
   console.log("🧠 Incoming message:", userMessage);
 
   try {
     const response = await fetch(
-      `https://api.botpress.cloud/v1/bots/${BOT_ID}/converse`,
+      `https://api.botpress.cloud/v1/chat/${BOT_ID}`,
       {
         method: "POST",
         headers: {
@@ -28,32 +28,32 @@ app.post("/api/message", async (req, res) => {
         },
         body: JSON.stringify({
           type: "text",
-          payload: { text: userMessage },
+          text: userMessage,
         }),
       }
     );
 
-    const text = await response.text(); // Always read as text first
+    const text = await response.text();
     console.log("🧾 Raw Response:", text);
 
-    // Try parsing safely
     let data;
     try {
       data = JSON.parse(text);
     } catch {
-      console.error("❌ Failed to parse Botpress JSON. Response was not JSON.");
-      return res
-        .status(500)
-        .json({ error: "Invalid Botpress response", raw: text });
+      console.error("❌ Failed to parse JSON. Response was not JSON.");
+      return res.status(500).json({
+        error: "Invalid Botpress response",
+        raw: text,
+      });
     }
 
-    // If the bot gave a reply
-    if (data && data.responses && data.responses.length > 0) {
-      const reply = data.responses[0].payload.text || "No reply from Aurora AI.";
-      res.json({ reply });
-    } else {
-      res.json({ reply: "No reply received from Aurora AI." });
-    }
+    // Extract bot reply
+    const reply =
+      data?.responses?.[0]?.text ||
+      data?.response?.text ||
+      "No reply received from Aurora AI.";
+
+    res.json({ reply });
   } catch (error) {
     console.error("🚨 Server error:", error);
     res.status(500).json({ error: "Server error contacting Aurora AI." });
@@ -61,9 +61,9 @@ app.post("/api/message", async (req, res) => {
 });
 
 app.get("/", (req, res) => {
-  res.send("✅ Aurora Medical AI backend is live!");
+  res.send("✅ Aurora Medical AI backend is live and connected to Botpress Cloud!");
 });
 
-app.listen(PORT, () =>
-  console.log(`🚀 Aurora backend running on port ${PORT}`)
-);
+app.listen(PORT, () => {
+  console.log(`🚀 Aurora backend running on port ${PORT}`);
+});
