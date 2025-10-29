@@ -6,11 +6,9 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// 🔧 Botpress credentials
 const BOT_ID = "72fae477-0056-4481-827d-ae436a468aab";
 const API_KEY = "bp_bak_N32vxOuMQ0ps2b6tbxuWg_kp2PiYtk3Nk2fj";
 
-// 🧠 Chat endpoint
 app.post("/api/message", async (req, res) => {
   const userMessage = req.body.message;
 
@@ -27,32 +25,41 @@ app.post("/api/message", async (req, res) => {
       }),
     });
 
-    // Log full raw response
     const raw = await response.text();
-    console.log("🧾 Raw Botpress response:", raw);
+    console.log("🧾 Status:", response.status);
+    console.log("🧾 Headers:", Object.fromEntries(response.headers.entries()));
+    console.log("🧾 Raw Response:", raw.substring(0, 500)); // print first 500 chars
+
+    if (!response.ok) {
+      return res.status(response.status).json({
+        reply: `⚠️ Botpress error: ${response.status}.`,
+        details: raw.substring(0, 200),
+      });
+    }
 
     let data;
     try {
       data = JSON.parse(raw);
     } catch (err) {
       console.error("❌ Failed to parse JSON:", err);
-      return res.status(500).json({ reply: "⚠️ Unexpected response from Aurora AI (invalid JSON)." });
+      return res.status(500).json({
+        reply: "⚠️ Unexpected non-JSON response from Aurora AI.",
+        raw: raw.substring(0, 200),
+      });
     }
 
-    // If Botpress gave a proper text response
     if (data?.responses?.length > 0) {
       const replyText = data.responses.map(r => r.text).join(" ");
       return res.json({ reply: replyText });
     }
 
-    console.warn("⚠️ No reply found in Botpress response:", data);
+    console.warn("⚠️ No reply field found:", data);
     return res.json({ reply: "⚠️ No reply received from Aurora AI." });
   } catch (error) {
-    console.error("💥 Error contacting Botpress:", error);
-    res.status(500).json({ reply: "⚠️ Aurora AI backend error." });
+    console.error("💥 Network error contacting Botpress:", error);
+    res.status(500).json({ reply: "⚠️ Aurora AI backend connection error." });
   }
 });
 
-// 🌐 Server
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`Aurora AI backend running on port ${PORT}`));
